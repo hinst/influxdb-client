@@ -59,3 +59,10 @@ function escapeTag(tag: string) {
     tag = replaceText(tag, ' ', '\\ ');
     return tag;
 }
+
+export function buildPredicate(measurement: string, tags: {[key: string]: string}) {
+    let predicate = '_measurement="' + escapeMeasurement(measurement) + '"';
+    for (const key in tags)
+        predicate += ' AND ' + escapeTag(key) + '="' + escapeTag(key) + '"';
+    return predicate;
+}
