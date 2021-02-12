@@ -1,6 +1,7 @@
-import fetch from 'node-fetch';
-const http = require('http');
-const https = require('https');
+import fetch, { Response } from 'node-fetch';
+
+import http from 'http';
+import https from 'https';
 const httpAgent = new http.Agent({ keepAlive: true });
 const httpsAgent = new https.Agent({ keepAlive: true });
 const agent = (_parsedURL: URL) => _parsedURL.protocol == 'https:' ? httpsAgent : httpAgent;
@@ -9,10 +10,48 @@ export class InfluxDb {
     apiToken: string;
     apiUrl: string;
 
+    constructor(apiUrl: string, apiToken: string) {
+        this.apiUrl = apiUrl;
+        this.apiToken = apiToken;
+    }
+
     get headers() {
         return {
             Authorization: 'Token ' + this.apiToken
         };
+    }
+
+    async createBucket(organizationId: string, name: string, shardDuration: number) {
+        const bucket = {
+            orgID: organizationId,
+            name,
+            shardGroupDuration: shardDuration
+        };
+        const url = this.apiUrl + '/buckets';
+        const response = await fetch(url, {
+            agent,
+            method: 'POST',
+            headers: this.headers,
+            body: JSON.stringify(bucket),
+        });
+        await this.assertResponse(response);
+        return await response.json();
+    }
+
+    async writeData(
+        organizationName: string,
+        bucketName: string,
+        lines: string
+    ) {
+        const url = this.apiUrl + '/write?org=' + encodeURIComponent(organizationName) +
+            '&bucket=' + bucketName + '&precision=ms';
+        const response = await fetch(url, {
+            agent,
+            method: 'POST',
+            headers: this.headers,
+            body: lines
+        });
+        await this.assertResponse(response);
     }
 
     async deleteData(
@@ -38,8 +77,18 @@ export class InfluxDb {
             method: 'POST',
             body: JSON.stringify(query)
         });
+        await this.assertResponse(response);
+    }
+
+    private async assertResponse(response: Response) {
         if (!response.ok)
-            throw new Error(response.statusText + '\n' + await response.text());
+            throw new InfluxDbException(response.statusText + '\n' + await response.text());
+    }
+}
+
+export class InfluxDbException extends Error {
+    constructor(message: string) {
+        super(message);
     }
 }
 
