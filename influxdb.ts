@@ -2,6 +2,7 @@ import fetch, { Response } from 'node-fetch';
 
 import http from 'http';
 import https from 'https';
+import papaparse from 'papaparse';
 const httpAgent = new http.Agent({ keepAlive: true });
 const httpsAgent = new https.Agent({ keepAlive: true });
 const agent = (_parsedURL: URL) => _parsedURL.protocol == 'https:' ? httpsAgent : httpAgent;
@@ -41,11 +42,7 @@ export class InfluxDb {
         return await response.json();
     }
 
-    async writeData(
-        organizationName: string,
-        bucketName: string,
-        lines: string
-    ) {
+    async writeData(organizationName: string, bucketName: string, lines: string) {
         const url = this.apiUrl + '/write?org=' + encodeURIComponent(organizationName) +
             '&bucket=' + bucketName + '&precision=ms';
         const response = await fetch(url, {
@@ -55,6 +52,26 @@ export class InfluxDb {
             body: lines
         });
         await this.assertResponse(response);
+    }
+
+    async readData(organizationName: string, query: string): Promise<string[][]> {
+        const url = this.apiUrl + '/query?org=' + encodeURIComponent(organizationName);
+        const requestObject = {
+            query: query,
+            type: 'flux'
+        };
+        const response = await fetch(url, {
+            agent,
+            method: 'POST',
+            headers: this.headers,
+            body: JSON.stringify(requestObject)
+        });
+        await this.assertResponse(response);
+        const text = (await response.text()).trim();
+        const table = papaparse.parse(text, { escapeChar: '\\' });
+        if (table.errors != null && table.errors.length)
+            throw new Error('Could not parse the response as CSV. Error: ' + table.errors[0]);
+        return table.data as string[][];
     }
 
     async deleteData(
@@ -117,4 +134,16 @@ export function buildPredicate(measurement: string, tags: {[key: string]: string
     for (const key in tags)
         predicate += ' AND ' + escapeTag(key) + '="' + escapeTag(key) + '"';
     return predicate;
+}
+
+export function buildTimedValueLine(
+    measurement: string,
+    tags: { [key: string] : string },
+    value: number,
+    timeStamp: number
+) {
+    let line = escapeMeasurement(measurement);
+    for (const key in tags)
+        line += ',' + escapeTag(key) + '=' + escapeTag(tags[key]);
+    line += ' value=' + value + ' ' + timeStamp;
 }
