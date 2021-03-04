@@ -146,4 +146,5 @@ export function buildTimedValueLine(
     for (const key in tags)
         line += ',' + escapeTag(key) + '=' + escapeTag(tags[key]);
     line += ' value=' + value + ' ' + timeStamp;
+    return line;
 }
