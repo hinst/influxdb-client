@@ -6,6 +6,9 @@ const httpAgent = new http.Agent({ keepAlive: true });
 const httpsAgent = new https.Agent({ keepAlive: true });
 const agent = (_parsedURL: URL) => _parsedURL.protocol == 'https:' ? httpsAgent : httpAgent;
 
+const MIN_DATE_STRING = '1970-01-02T00:00:00.000Z';
+const MAX_DATE_STRING = '2970-01-02T00:00:00.000Z';
+
 export class InfluxDb {
     apiToken: string;
     apiUrl: string;
@@ -68,8 +71,8 @@ export class InfluxDb {
             predicate += ' AND ' + escapeTag(key) + '="' + escapeTag(key) + '"';
         const query = {
             predicate,
-            start: '1970-01-02T00:00:00.000Z',
-            stop: '2970-01-02T00:00:00.000Z'
+            start: MIN_DATE_STRING,
+            stop: MAX_DATE_STRING
         };
         const response = await fetch(url, {
             agent,
