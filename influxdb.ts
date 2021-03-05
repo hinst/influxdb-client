@@ -25,6 +25,18 @@ export class InfluxDb {
         };
     }
 
+    async getOrganizationByName(organizationName: string) {
+        let url = this.apiUrl + '/orgs?org=' + encodeURIComponent(organizationName);
+        const response = await fetch(url, {
+            agent,
+            method: 'GET',
+            headers: this.headers,
+        });
+        await this.assertResponse(response);
+        const data = await response.json();
+        return data.orgs[0];
+    }
+
     async createBucket(organizationId: string, name: string, shardDuration: number) {
         const bucket = {
             orgID: organizationId,
