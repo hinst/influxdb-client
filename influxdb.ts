@@ -211,6 +211,7 @@ export class QueryBuilder {
     bucket: string;
     measurement: string;
     tags: { [key: string]: string };
+    count: boolean;
 
     setBucketName(bucket: string) {
         this.bucket = bucket;
@@ -227,6 +228,11 @@ export class QueryBuilder {
         return this;
     }
 
+    setCount(count: boolean) {
+        this.count = count;
+        return this;
+    }
+
     build(): string {
         let filter = `r._measurement == "${escapeMeasurement(this.measurement)}"`;
         if (this.tags)
@@ -237,8 +243,11 @@ export class QueryBuilder {
         let query = `from(bucket: "${this.bucket}")
             |> range(start: 0)
             |> filter(fn: (r) => ${filter})
-            |> keep(columns: ["_time", "_value"])
-            |> sort(columns: ["_time"])`;
+            |> keep(columns: ["_time", "_value"])`;
+        if (this.count)
+            query += '\n |> count()'
+        else
+            query += '\n |> sort(columns: ["_time"])';
         query = query.split('\n').map(line => line.trim()).join('\n');
         return query;
     }
