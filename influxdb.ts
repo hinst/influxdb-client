@@ -100,10 +100,56 @@ export class InfluxDb {
         await this.assertResponse(response);
     }
 
+    async getBuckets(organizationName: string): Promise<Bucket[]> {
+        let url = this.apiUrl + '/buckets';
+        if (organizationName)
+            url += '?org=' + encodeURIComponent(organizationName);
+
+        const buckets: Bucket[] = [];
+        while (url) {
+            const response = await fetch(url, {
+                agent,
+                headers: this.headers,
+                method: 'GET'
+            });
+            await this.assertResponse(response);
+            const responseObject = await response.json();
+            for (const bucket of responseObject.buckets)
+                buckets.push(bucket);
+            url = responseObject.links.next;
+        }
+        return buckets;
+    }
+
+    /** @returns true if deleted */
+    async deleteBucketByName(organizationName: string, bucketName: string): Promise<boolean> {
+        const buckets = await this.getBuckets(organizationName);
+        const bucket = buckets.find(b => b.name == bucketName);
+        const found = bucket != null;
+        if (found)
+            await this.deleteBucket(bucket.id);
+        return found;
+    }
+
+    async deleteBucket(bucketId: string) {
+        const url = this.apiUrl + '/buckets/' + encodeURIComponent(bucketId);
+        const response = await fetch(url, {
+            agent,
+            headers: this.headers,
+            method: 'DELETE'
+        });
+        await this.assertResponse(response);
+    }
+
     private async assertResponse(response: Response) {
         if (!response.ok)
             throw new InfluxDbException(response.statusText + '\n' + await response.text());
     }
+}
+
+export class Bucket {
+    id: string;
+    name: string;
 }
 
 export class InfluxDbException extends Error {
@@ -129,7 +175,7 @@ function escapeTag(tag: string) {
     return tag;
 }
 
-export function buildPredicate(measurement: string, tags: {[key: string]: string}) {
+export function buildPredicate(measurement: string, tags: {[key: string]: string}): string {
     let predicate = '_measurement="' + escapeMeasurement(measurement) + '"';
     for (const key in tags)
         predicate += ' AND ' + escapeTag(key) + '="' + escapeTag(key) + '"';
@@ -141,7 +187,7 @@ export function buildTimedValueLine(
     tags: { [key: string] : string },
     value: number,
     timeStamp: number
-) {
+): string {
     let line = escapeMeasurement(measurement);
     for (const key in tags)
         line += ',' + escapeTag(key) + '=' + escapeTag(tags[key]);
