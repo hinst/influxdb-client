@@ -82,7 +82,7 @@ export class InfluxDb {
         const text = (await response.text()).trim();
         const table = papaparse.parse(text, { escapeChar: '\\' });
         if (table.errors != null && table.errors.length)
-            throw new Error('Could not parse the response as CSV. Error: ' + table.errors[0]);
+            throw new Error('Could not parse the response as CSV. Error: ' + table.errors[0].message);
         return table.data as string[][];
     }
 
