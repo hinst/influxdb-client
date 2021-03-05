@@ -80,7 +80,7 @@ export class InfluxDb {
         });
         await this.assertResponse(response);
         const text = (await response.text()).trim();
-        const table = papaparse.parse(text, { escapeChar: '\\' });
+        const table = papaparse.parse(text, { escapeChar: '\\', delimiter: ',' });
         if (table.errors != null && table.errors.length)
             throw new Error('Could not parse the response as CSV. Error: ' + table.errors[0].message);
         return table.data as string[][];
@@ -205,4 +205,41 @@ export function buildTimedValueLine(
         line += ',' + escapeTag(key) + '=' + escapeTag(tags[key]);
     line += ' value=' + value + ' ' + timeStamp;
     return line;
+}
+
+export class QueryBuilder {
+    bucket: string;
+    measurement: string;
+    tags: { [key: string]: string };
+
+    setBucketName(bucket: string) {
+        this.bucket = bucket;
+        return this;
+    }
+
+    setMeasurementName(measurement: string) {
+        this.measurement = measurement;
+        return this;
+    }
+
+    setTags(tags: { [key: string]: string }) {
+        this.tags = tags;
+        return this;
+    }
+
+    build(): string {
+        let filter = `r._measurement == "${escapeMeasurement(this.measurement)}"`;
+        if (this.tags)
+            for (const tagKey in this.tags) {
+                const tagValue = this.tags[tagKey];
+                filter += ` and r["${escapeTag(tagKey)}"] == "${escapeTag(tagValue)}"`;
+            }
+        let query = `from(bucket: "${this.bucket}")
+            |> range(start: 0)
+            |> filter(fn: (r) => ${filter})
+            |> keep(columns: ["_time", "_value"])
+            |> sort(columns: ["_time"])`;
+        query = query.split('\n').map(line => line.trim()).join('\n');
+        return query;
+    }
 }
