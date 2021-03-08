@@ -95,9 +95,7 @@ export class InfluxDb {
         const url = this.apiUrl + '/delete' +
             '?org=' + encodeURIComponent(organizationName) +
             '&bucket=' + encodeURIComponent(bucketName);
-        let predicate = '_measurement="' + escapeMeasurement(measurement) + '"';
-        for (const key in tags)
-            predicate += ' AND ' + escapeTag(key) + '="' + escapeTag(key) + '"';
+        const predicate = buildPredicate(measurement, tags);
         const query = {
             predicate,
             start: MIN_DATE_STRING,
