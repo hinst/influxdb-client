@@ -210,6 +210,10 @@ export class QueryBuilder {
     measurement: string;
     tags: { [key: string]: string };
     count: boolean;
+    /** Unix timestamp measured in seconds */
+    timeStart = 0;
+    /** Unix timestamp measured in seconds */
+    timeStop: number;
 
     setBucketName(bucket: string) {
         this.bucket = bucket;
@@ -231,6 +235,19 @@ export class QueryBuilder {
         return this;
     }
 
+    setRange(timeStart: number, timeStop: number) {
+        this.timeStart = timeStart;
+        this.timeStop = timeStop;
+        return this;
+    }
+
+    private get rangeInnerQuery(): string {
+        const timeStart = this.timeStart != null ? 'start: ' + this.timeStart : null;
+        const timeStop = this.timeStop != null ? 'stop: ' + this.timeStop : null;
+        const query = [timeStart, timeStop].filter(str => str != null).join(', ');
+        return query;
+    }
+
     build(): string {
         let filter = `r._measurement == "${escapeMeasurement(this.measurement)}"`;
         if (this.tags)
@@ -239,7 +256,7 @@ export class QueryBuilder {
                 filter += ` and r["${escapeTag(tagKey)}"] == "${escapeTag(tagValue)}"`;
             }
         let query = `from(bucket: "${this.bucket}")
-            |> range(start: 0)
+            |> range(${this.rangeInnerQuery})
             |> filter(fn: (r) => ${filter})
             |> keep(columns: ["_time", "_value"])`;
         if (this.count)
