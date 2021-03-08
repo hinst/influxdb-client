@@ -8,7 +8,8 @@ const httpsAgent = new https.Agent({ keepAlive: true });
 const agent = (_parsedURL: URL) => _parsedURL.protocol == 'https:' ? httpsAgent : httpAgent;
 
 const MIN_DATE_STRING = '1970-01-02T00:00:00.000Z';
-const MAX_DATE_STRING = '2970-01-02T00:00:00.000Z';
+/** Note: year 2262 is actually the maximum date supported by InfluxDB */
+const MAX_DATE_STRING = '2262-01-02T00:00:00.000Z';
 
 export class InfluxDb {
     apiToken: string;
@@ -188,7 +189,7 @@ function escapeTag(tag: string) {
 export function buildPredicate(measurement: string, tags: {[key: string]: string}): string {
     let predicate = '_measurement="' + escapeMeasurement(measurement) + '"';
     for (const key in tags)
-        predicate += ' AND ' + escapeTag(key) + '="' + escapeTag(key) + '"';
+        predicate += ' AND ' + escapeTag(key) + '="' + escapeTag(tags[key]) + '"';
     return predicate;
 }
 
