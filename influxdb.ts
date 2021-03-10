@@ -91,17 +91,15 @@ export class InfluxDb {
         organizationName: string,
         bucketName: string,
         measurement: string,
-        tags: {[key: string]: string}
+        tags: {[key: string]: string},
+        start: string = MIN_DATE_STRING,
+        stop: string = MAX_DATE_STRING
     ) {
         const url = this.apiUrl + '/delete' +
             '?org=' + encodeURIComponent(organizationName) +
             '&bucket=' + encodeURIComponent(bucketName);
         const predicate = buildPredicate(measurement, tags);
-        const query = {
-            predicate,
-            start: MIN_DATE_STRING,
-            stop: MAX_DATE_STRING
-        };
+        const query = { predicate, start, stop };
         const response = await fetch(url, {
             agent,
             headers: this.headers,
