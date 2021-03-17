@@ -27,15 +27,27 @@ export class InfluxDb {
     }
 
     async getOrganizationByName(organizationName: string) {
-        let url = this.apiUrl + '/orgs?org=' + encodeURIComponent(organizationName);
+        const url = this.apiUrl + '/orgs?org=' + encodeURIComponent(organizationName);
         const response = await fetch(url, {
             agent,
             method: 'GET',
             headers: this.headers,
         });
         await this.assertResponse(response);
-        const data = await response.json();
+        const data: OrganizationsResponse = await response.json();
         return data.orgs[0];
+    }
+
+    async getAllOrganizations(): Promise<Organization[]> {
+        const url = this.apiUrl + '/orgs';
+        const response = await fetch(url, {
+            agent,
+            method: 'GET',
+            headers: this.headers,
+        });
+        await this.assertResponse(response);
+        const data: OrganizationsResponse = await response.json();
+        return data.orgs;
     }
 
     async createBucket(organizationId: string, name: string, shardDuration: number) {
@@ -159,6 +171,22 @@ export class InfluxDb {
 export class Bucket {
     id: string;
     name: string;
+}
+
+export class Organization {
+    id: string;
+    name: string;
+}
+
+class Links {
+    prev: string;
+    self: string;
+    next: string;
+}
+
+class OrganizationsResponse {
+    links: Links;
+    orgs: Organization[];
 }
 
 export class InfluxDbException extends Error {
