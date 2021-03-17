@@ -50,6 +50,20 @@ export class InfluxDb {
         return data.orgs;
     }
 
+    async createOrganization(organization: Organization): Promise<Organization> {
+    
+        const url = this.apiUrl + '/orgs';
+        const response = await fetch(url, {
+            agent,
+            method: 'POST',
+            headers: this.headers,
+            body: JSON.stringify(organization),
+        });
+        await this.assertResponse(response);
+        const data: Organization = await response.json();
+        return data;
+    }
+
     async createBucket(organizationId: string, name: string, shardDuration: number) {
         const bucket = {
             orgID: organizationId,
