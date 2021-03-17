@@ -13,10 +13,14 @@ const MAX_DATE_STRING = '2262-01-02T00:00:00.000Z';
 
 export class InfluxDb {
     apiToken: string;
-    apiUrl: string;
+    url: string;
 
-    constructor(apiUrl: string, apiToken: string) {
-        this.apiUrl = apiUrl;
+    get apiUrl() {
+        return this.url + '/api/v2';
+    }
+
+    constructor(url: string, apiToken: string) {
+        this.url = url;
         this.apiToken = apiToken;
     }
 
@@ -39,19 +43,24 @@ export class InfluxDb {
     }
 
     async getAllOrganizations(): Promise<Organization[]> {
-        const url = this.apiUrl + '/orgs';
-        const response = await fetch(url, {
-            agent,
-            method: 'GET',
-            headers: this.headers,
-        });
-        await this.assertResponse(response);
-        const data: OrganizationsResponse = await response.json();
-        return data.orgs;
+        let url = this.apiUrl + '/orgs';
+        let organizations: Organization[] = [];
+        while (url != null) {
+            const response = await fetch(url, {
+                agent,
+                method: 'GET',
+                headers: this.headers,
+            });
+            await this.assertResponse(response);
+            const data: OrganizationsResponse = await response.json();
+            organizations.push(...data.orgs);
+            url = data.links.next ? this.url + data.links.next : null;
+        }
+        return organizations;
     }
 
     async createOrganization(organization: Organization): Promise<Organization> {
-    
+
         const url = this.apiUrl + '/orgs';
         const response = await fetch(url, {
             agent,
