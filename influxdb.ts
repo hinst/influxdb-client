@@ -7,9 +7,9 @@ const httpAgent = new http.Agent({ keepAlive: true });
 const httpsAgent = new https.Agent({ keepAlive: true });
 const agent = (_parsedURL: URL) => _parsedURL.protocol == 'https:' ? httpsAgent : httpAgent;
 
-const MIN_DATE_STRING = '1970-01-02T00:00:00.000Z';
-/** Note: year 2262 is actually the maximum date supported by InfluxDB */
-const MAX_DATE_STRING = '2262-01-02T00:00:00.000Z';
+// https://docs.influxdata.com/influxdb/v1.8/troubleshooting/frequently-asked-questions/#what-are-the-minimum-and-maximum-timestamps-that-influxdb-can-store
+export const INFLUX_MIN_DATE_STRING = '1677-09-21T00:12:43.145224194Z';
+export const INFLUX_MAX_DATE_STRING = '2262-04-11T23:47:16.854775806Z';
 
 export class InfluxDb {
     apiToken: string;
@@ -127,8 +127,8 @@ export class InfluxDb {
         bucketName: string,
         measurement: string,
         tags: {[key: string]: string},
-        start: string = MIN_DATE_STRING,
-        stop: string = MAX_DATE_STRING
+        start: string = INFLUX_MIN_DATE_STRING,
+        stop: string = INFLUX_MAX_DATE_STRING
     ) {
         const url = this.apiUrl + '/delete' +
             '?org=' + encodeURIComponent(organizationName) +
@@ -236,10 +236,12 @@ function escapeTag(tag: string) {
 }
 
 export function buildPredicate(measurement: string, tags: {[key: string]: string}): string {
-    let predicate = '_measurement="' + escapeMeasurement(measurement) + '"';
+    const conditions = measurement != null
+        ? ['_measurement="' + escapeMeasurement(measurement) + '"']
+        : [];
     for (const key in tags)
-        predicate += ' AND ' + escapeTag(key) + '="' + escapeTag(tags[key]) + '"';
-    return predicate;
+        conditions.push(escapeTag(key) + '="' + escapeTag(tags[key]) + '"');
+    return conditions.join(' AND ');
 }
 
 export function buildTimedValueLine(
