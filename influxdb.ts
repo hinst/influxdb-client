@@ -301,11 +301,15 @@ export class QueryBuilder {
     }
 
     build(): string {
-        let filter = `r._measurement == "${escapeMeasurement(this.measurement)}"`;
+        let filter = '';
+        if (this.measurement)
+            filter += `r._measurement == "${escapeMeasurement(this.measurement)}"`;
         if (this.tags)
             for (const tagKey in this.tags) {
                 const tagValue = this.tags[tagKey];
-                filter += ` and r["${escapeTag(tagKey)}"] == "${escapeTag(tagValue)}"`;
+                if (filter.length > 0)
+                    filter += ` and `;
+                filter += `r["${escapeTag(tagKey)}"] == "${escapeTag(tagValue)}"`;
             }
         let query = `from(bucket: "${this.bucket}")
             |> range(${this.rangeInnerQuery})
